@@ -422,7 +422,7 @@ class AllureListener(object):
 #             self.save_properties()
             self.AllureProperties.save_properties()
             logger.console("pabot poolid: ["+ str(self.PabotPoolId)+"]")
-            if (self.AllureProperties.get_property('allure.cli.outputfiles') and self.PabotPoolId is None):
+            if (self.AllureProperties.get_property('allure.cli.outputfiles') == 'True' and self.PabotPoolId is None):
                 self.allure(self.AllureProperties)
 
         return
