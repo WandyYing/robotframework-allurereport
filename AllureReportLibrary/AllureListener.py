@@ -161,10 +161,12 @@ class AllureListener(object):
         else:
             description = name
 
+        severity = 'critical' if attributes['critical'] == 'yes' else 'normal'
         test = TestCase(name=name,
                 description=description,
                 start=now(),
                 attachments=[],
+                severity=severity,
                 labels=[],
                 steps=[])
 
