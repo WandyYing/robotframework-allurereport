@@ -22,6 +22,8 @@ setup(
                         "Development Status :: 4 - Beta"
                   ],
     install_requires=[
+        "robotframework",
+        "sqlalchemy",
         "lxml>=3.2.0",
         "namedlist",
         "py",
