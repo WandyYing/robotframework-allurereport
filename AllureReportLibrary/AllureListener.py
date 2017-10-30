@@ -229,7 +229,7 @@ class AllureListener(object):
         # Reading the Allure Properties file for the Issue Id regular expression
         # for the Issues and the URL to where the Issues/Test Man links should go.
         if(self.AllurePropPath is None):
-            self.AllurePropPath = self.SuitSrc + '\\allure.properties'
+            self.AllurePropPath = os.path.join(self.SuitSrc, 'allure.properties')
 
         if os.path.exists(self.AllurePropPath) is True: 
             self.AllureProperties = AllureProperties(self.AllurePropPath)

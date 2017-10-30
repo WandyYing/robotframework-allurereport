@@ -52,7 +52,7 @@ class AllureProperties(object):
     # store the Allure properties
     #
         if(path is None):
-            output_path = self.get_property('allure.cli.logs.xml')+'\\allure.properties'
+            output_path = os.path.join(self.get_property('allure.cli.logs.xml'), 'allure.properties')
         else:
             output_path = path
          
