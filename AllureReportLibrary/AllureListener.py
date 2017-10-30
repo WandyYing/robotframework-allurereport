@@ -24,7 +24,6 @@ from allure.structure import Environment, EnvParameter, TestLabel, Failure, Atta
 from allure.utils import now
 import jprops
 from lxml import etree
-from oauthlib.uri_validate import path
 import py
 from robot.api import logger
 from robot.libraries.BuiltIn import BuiltIn
