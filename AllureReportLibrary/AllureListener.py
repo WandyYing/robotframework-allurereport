@@ -385,7 +385,10 @@ class AllureListener(object):
                     self.attach('{}'.format(screenshot.group(0)) , screenshot.group(0))
             if(msg['html']=='yes'):
                 screenshot = re.search('[a-z]+-[a-z]+-[0-9]+.png',msg['message'])
-                kwname = '{}'.format(screenshot.group(0))
+                if screenshot:
+                    kwname = '{}'.format(screenshot.group(0))
+                else:
+                    kwname = msg['message']
 #                 logger.console('kwname: '+kwname)
             else:
                 kwname = msg['message']
