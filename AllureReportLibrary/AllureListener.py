@@ -78,8 +78,8 @@ class AllureListener(object):
                                 'template': ''
                                 }
  
-        if len(str(start_test_attributes.get('doc'))) > 0:
-            description = str(start_test_attributes.get('doc'))
+        if len(start_test_attributes.get('doc')) > 0:
+            description = start_test_attributes.get('doc')
         else:
             description = name
 
@@ -156,8 +156,8 @@ class AllureListener(object):
     
     def start_test(self, name, attributes):
 
-        if len(str(attributes.get('doc'))) > 0:
-            description = str(attributes.get('doc'))
+        if len(attributes.get('doc')) > 0:
+            description = attributes.get('doc')
         else:
             description = name
 
