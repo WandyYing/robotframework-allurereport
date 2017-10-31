@@ -276,7 +276,7 @@ class AllureListener(object):
             description = name
         
         self.testsuite = TestSuite(name=name,
-                title=name,
+                title=attributes['longname'],
                 description=description,
                 tests=[],
                 labels=[],
