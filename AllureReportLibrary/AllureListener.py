@@ -24,14 +24,12 @@ from allure.structure import Environment, EnvParameter, TestLabel, Failure, Atta
 from allure.utils import now
 import jprops
 from lxml import etree
-import py
 from robot.api import logger
 from robot.libraries.BuiltIn import BuiltIn
 from robot.libraries.Process import Process
 from robot.running.userkeyword import UserLibrary
 from robot.version import get_version, get_full_version, get_interpreter
 from six import text_type, iteritems
-from sqlalchemy.sql.expression import false
 
 from common import AllureImpl
 from constants import Robot, ROBOT_OUTPUT_FILES, SEVERITIES, STATUSSES
@@ -57,7 +55,7 @@ class AllureListener(object):
         # I case the Listener is added via Command Line, the Robot Context is not
         # yet there and will cause an exceptions. Similar section in start_suite.
         try:
-            AllureListenerActive = BuiltIn().get_variable_value('${ALLURE}', false)
+            AllureListenerActive = BuiltIn().get_variable_value('${ALLURE}', False)
             BuiltIn().set_global_variable('${ALLURE}', True)
 
         except:

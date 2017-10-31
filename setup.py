@@ -23,10 +23,8 @@ setup(
                   ],
     install_requires=[
         "robotframework",
-        "sqlalchemy",
         "lxml>=3.2.0",
         "namedlist",
-        "py",
         "six>=1.9.0",
         "pytest-allure-adaptor>=1.7.6",
         "jprops>1.0"
