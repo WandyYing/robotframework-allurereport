@@ -28,7 +28,6 @@ import py
 from robot.api import logger
 from robot.libraries.BuiltIn import BuiltIn
 from robot.libraries.Process import Process
-from robot.libraries.Screenshot import Screenshot
 from robot.running.userkeyword import UserLibrary
 from robot.version import get_version, get_full_version, get_interpreter
 from six import text_type, iteritems
