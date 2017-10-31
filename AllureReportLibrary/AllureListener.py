@@ -82,11 +82,13 @@ class AllureListener(object):
         else:
             description = name
 
+        severity = 'critical'
         test = TestCase(name=name,
                 description=description,
                 start=now(),
                 attachments=[],
                 labels=[],
+                severity=severity,
 #                 parameters=[],
                 steps=[])
 
@@ -298,11 +300,11 @@ class AllureListener(object):
                 self.AllureImplc._write_xml(f, self.testsuite)
         return
 
-    def start_keyword(self, name, attributes):
+    def start_keyword(self, name, attributes, is_message=False):
 #         logger.console('\nstart_keyword: ['+name+']')
 #         logger.console('  ['+attributes['type']+'] [stack lenght] ['+str(len(self.stack))+'] [testsuite lenght] ['+ str(len(self.testsuite.tests))+']')
 
-        if(hasattr(self, attributes.get('kwname').replace(" ", "_")) and callable(getattr(self, attributes.get('kwname').replace(" ", "_")))):
+        if(not is_message and hasattr(self, attributes.get('kwname').replace(" ", "_")) and callable(getattr(self, attributes.get('kwname').replace(" ", "_")))):
            libraryMethodToCall = getattr(self, attributes.get('kwname').replace(" ", "_"))
            result = libraryMethodToCall(name, attributes)
            keyword = TestStep(name=name,
@@ -400,7 +402,7 @@ class AllureListener(object):
                  'starttime': now(),
                  'tags': [],
                  'type': 'Keyword'}
-            self.start_keyword('Log Message', startKeywordArgs)
+            self.start_keyword('Log Message', startKeywordArgs, True)
 
             endKeywordArgs=     {'args': [],
                  'assign': [],
