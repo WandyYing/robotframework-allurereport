@@ -437,14 +437,22 @@ class AllureListener(object):
         environment['id'] = 'Robot Framework'
         environment['name'] = socket.getfqdn()
         environment['url']= 'http://'+socket.getfqdn()+':8000'
-        
+        included_args = self.AllureProperties.get_property('robot.cli.arguments.included')
+        rf_args = sys.argv[1:]
+        if included_args:
+            rf_args = []
+            for index, arg in enumerate(sys.argv):
+                if arg in included_args:
+                    rf_args.append(sys.argv[index])
+                    if index < len(sys.argv) and not sys.argv[index + 1].startswith('-'):
+                        rf_args.append(sys.argv[index + 1])
         env_dict = (\
                     {'Robot Framework Full Version': get_full_version()},\
                     {'Robot Framework Version': get_version()},\
                     {'Interpreter': get_interpreter()},\
                     {'Python version': sys.version.split()[0]},\
                     {'Allure Adapter version': VERSION},\
-                    {'Robot Framework CLI Arguments': sys.argv[1:]},\
+                    {'Robot Framework CLI Arguments': rf_args},\
                     {'Robot Framework Hostname': socket.getfqdn()},\
                     {'Robot Framework Platform': sys.platform}\
                     )
