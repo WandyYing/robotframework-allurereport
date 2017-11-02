@@ -116,40 +116,51 @@ class AllureListener(object):
         elif end_test_attributes.get('doc') is not '':
             test.description = attributes.get('doc')
 
-        if end_test_attributes['tags']:
-            for tag in end_test_attributes['tags']:
-                if re.search(self.AllureIssueIdRegEx, tag):
-                    test.labels.append(TestLabel(
-                        name=Label.ISSUE,
-                        value=tag))
-                if tag.startswith('feature'):
-                    test.labels.append(TestLabel(
-                        name='feature',
-                        value=tag.split(':')[-1]))
-                if tag.startswith('story'):
-                    test.labels.append(TestLabel(
-                        name='story',
-                        value=tag.split(':')[-1]))
-                elif tag in SEVERITIES:
-                    test.labels.append(TestLabel(
-                        name='severity',
-                        value=tag))
-                elif tag in STATUSSES:
-                    test.status = tag  # overwrites the actual test status with this value.
+        # if end_test_attributes['tags']:
+        #     for tag in end_test_attributes['tags']:
+        #         if re.search(self.AllureIssueIdRegEx, tag):
+        #             test.labels.append(TestLabel(
+        #                 name=Label.ISSUE,
+        #                 value=tag))
+        #         if tag.startswith('feature'):
+        #             test.labels.append(TestLabel(
+        #                 name='feature',
+        #                 value=tag.split(':')[-1]))
+        #         if tag.startswith('story'):
+        #             test.labels.append(TestLabel(
+        #                 name='story',
+        #                 value=tag.split(':')[-1]))
+        #         elif tag in SEVERITIES:
+        #             test.labels.append(TestLabel(
+        #                 name='severity',
+        #                 value=tag))
+        #         elif tag in STATUSSES:
+        #             test.status = tag  # overwrites the actual test status with this value.
+        #
+        # self.PabotPoolId =  BuiltIn().get_variable_value('${PABOTEXECUTIONPOOLID}')
+        #
+        # if(self.PabotPoolId is not None):
+        #     self.threadId = 'PabotPoolId-' + str(self.PabotPoolId)
+        # else:
+        #     self.threadId = threading._get_ident()
+        #
+        # test.labels.append(TestLabel(
+        #     name='thread',
+        #     value=str(self.threadId)))
 
-        self.PabotPoolId =  BuiltIn().get_variable_value('${PABOTEXECUTIONPOOLID}')
-        
-        if(self.PabotPoolId is not None):
-            self.threadId = 'PabotPoolId-' + str(self.PabotPoolId)
+        test.stop = now()
+        step = TestStep(name=name,
+                              title=attributes.get('kwname'),
+                              attachments=[],
+                              steps=test.steps,
+                              start=test.start,
+                              stop=test.stop)
+        if attributes.get('type') == 'Setup':
+            self.setup = step
         else:
-            self.threadId = threading._get_ident()
-                
-        test.labels.append(TestLabel(
-            name='thread',
-            value=str(self.threadId)))
+            self.teardown = step
+        #self.testsuite.tests.append(test)
 
-        self.testsuite.tests.append(test)
-        test.stop = now()        
         return test
     
     def start_test(self, name, attributes):
@@ -284,6 +295,11 @@ class AllureListener(object):
     def end_suite(self, name, attributes):
 
         self.testsuite.stop = now()
+        for test in self.testsuite.tests:
+            test.steps.insert(0, self.setup)
+            test.steps.append(self.teardown)
+        self.setup = None
+        self.teardown = None
         logfilename = '%s-testsuite.xml' % uuid.uuid4()
 
         # When running a folder, the folder itself is also considered a Suite
@@ -358,13 +374,13 @@ class AllureListener(object):
                 self.stack[-1].steps.append(step)
                 return
 
-            if(attributes.get('type') == 'Setup' and len(self.testsuite.tests) == 0):
-                self.end_suitesetup(name, attributes)
-                return
-            
-            if(attributes.get('type') == 'Teardown' and isinstance(self.stack[-1], TestCase) is True):
-                self.end_suitesetup(name, attributes)
-                return
+        if(attributes.get('type') == 'Setup'):
+            self.end_suitesetup(name, attributes)
+            return
+
+        if(attributes.get('type') == 'Teardown'):
+            self.end_suitesetup(name, attributes)
+            return
         return
 
     def message(self, msg):
