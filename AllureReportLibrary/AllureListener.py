@@ -64,29 +64,14 @@ class AllureListener(object):
         
 
     def start_suitesetup(self, name, attributes):
-        
-        start_test_attributes= {'critical': 'yes',
-                                'doc': 'Test Suite Setup section',
-                                'starttime': attributes['starttime'],
-                                'tags': [],
-                                'id': 's1-s1-t0',
-                                'longname': BuiltIn().get_variable_value('${SUITE_NAME}'),
-                                'template': ''
-                                }
- 
-        if len(start_test_attributes.get('doc')) > 0:
-            description = start_test_attributes.get('doc')
-        else:
-            description = name
 
-        severity = 'critical'
+        severity = 'blocker'
         test = TestCase(name=name,
-                description=description,
+                description=name,
                 start=now(),
                 attachments=[],
                 labels=[],
                 severity=severity,
-#                 parameters=[],
                 steps=[])
 
         self.stack.append(test)
@@ -94,74 +79,27 @@ class AllureListener(object):
     
     def end_suitesetup(self, name, attributes):
 
-        end_test_attributes= {'critical': 'yes',
-                                'doc': 'Test Suite Setup section',
-                                'starttime': attributes['starttime'],
-                                'endtime': attributes['endtime'],
-                                'status': 'PASS',
-                                'tags': [],
-                                'id': 's1-s1-t0',
-                                'longname': BuiltIn().get_variable_value('${SUITE_NAME}'),
-                                'template': ''
-                                }
-
-        test = self.stack.pop()
-        BuiltIn().run_keyword(name)
-        
-        if end_test_attributes.get('status') == Robot.PASS:
-            test.status = Status.PASSED
-        elif end_test_attributes.get('status')==Robot.FAIL:
-            test.status = Status.FAILED
-            test.failure = Failure(message=end_test_attributes.get('message'), trace='')
-        elif end_test_attributes.get('doc') is not '':
-            test.description = attributes.get('doc')
-
-        # if end_test_attributes['tags']:
-        #     for tag in end_test_attributes['tags']:
-        #         if re.search(self.AllureIssueIdRegEx, tag):
-        #             test.labels.append(TestLabel(
-        #                 name=Label.ISSUE,
-        #                 value=tag))
-        #         if tag.startswith('feature'):
-        #             test.labels.append(TestLabel(
-        #                 name='feature',
-        #                 value=tag.split(':')[-1]))
-        #         if tag.startswith('story'):
-        #             test.labels.append(TestLabel(
-        #                 name='story',
-        #                 value=tag.split(':')[-1]))
-        #         elif tag in SEVERITIES:
-        #             test.labels.append(TestLabel(
-        #                 name='severity',
-        #                 value=tag))
-        #         elif tag in STATUSSES:
-        #             test.status = tag  # overwrites the actual test status with this value.
-        #
-        # self.PabotPoolId =  BuiltIn().get_variable_value('${PABOTEXECUTIONPOOLID}')
-        #
-        # if(self.PabotPoolId is not None):
-        #     self.threadId = 'PabotPoolId-' + str(self.PabotPoolId)
-        # else:
-        #     self.threadId = threading._get_ident()
-        #
-        # test.labels.append(TestLabel(
-        #     name='thread',
-        #     value=str(self.threadId)))
-
-        test.stop = now()
+        step = self.stack.pop()
+        if attributes.get('status') == Robot.PASS:
+            step.status = Status.PASSED
+        else:
+            step.status = Status.FAILED
+        step.description = attributes.get('doc')
+        step.stop = now()
         step = TestStep(name=name,
                               title=attributes.get('kwname'),
                               attachments=[],
-                              steps=test.steps,
-                              start=test.start,
-                              stop=test.stop)
+                              status=step.status,
+                              steps=step.steps,
+                              start=step.start,
+                              stop=step.stop)
         if attributes.get('type') == 'Setup':
             self.setup = step
         else:
             self.teardown = step
         #self.testsuite.tests.append(test)
 
-        return test
+        return step
     
     def start_test(self, name, attributes):
 
