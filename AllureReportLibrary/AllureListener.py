@@ -48,6 +48,10 @@ class AllureListener(object):
         self.callstack = []
         self.AllurePropPath = allurePropPath
         self.AllureIssueIdRegEx=''
+        self.suite_setup = None
+        self.suite_teardown = None
+        self.test_setup = None
+        self.test_teardown = None
         self.testsuite is None
         self.isFirstSuite = True
 
@@ -94,9 +98,13 @@ class AllureListener(object):
                               start=step.start,
                               stop=step.stop)
         if attributes.get('type') == 'Setup':
-            self.setup = step
+            if not self.stack:
+                self.suite_setup = step
+            else:
+                self.stack[-1].steps.append(step)
+
         else:
-            self.teardown = step
+            self.suite_teardown = step
         #self.testsuite.tests.append(test)
 
         return step
@@ -234,10 +242,12 @@ class AllureListener(object):
 
         self.testsuite.stop = now()
         for test in self.testsuite.tests:
-            test.steps.insert(0, self.setup)
-            test.steps.append(self.teardown)
-        self.setup = None
-        self.teardown = None
+            if self.suite_setup:
+                test.steps.insert(0, self.suite_setup)
+            if self.suite_teardown:
+                test.steps.append(self.suite_teardown)
+        self.suite_setup = None
+        self.suite_teardown = None
         logfilename = '%s-testsuite.xml' % uuid.uuid4()
 
         # When running a folder, the folder itself is also considered a Suite
@@ -283,7 +293,7 @@ class AllureListener(object):
         Although there is no test case yet, a virtual one is created to allow 
         for the inclusion of the keyword.
         """
-        if(attributes.get('type') == 'Setup' and len(self.stack) == 0):
+        if(attributes.get('type') == 'Setup'):
             self.start_suitesetup(name, attributes)
             return
 
