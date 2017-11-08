@@ -5,7 +5,6 @@ import os
 import uuid
 
 from lxml import etree
-import py
 
 import allure
 from allure.constants import AttachmentType, Status

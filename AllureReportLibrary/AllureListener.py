@@ -24,16 +24,12 @@ from allure.structure import Environment, EnvParameter, TestLabel, Failure, Atta
 from allure.utils import now
 import jprops
 from lxml import etree
-from oauthlib.uri_validate import path
-import py
 from robot.api import logger
 from robot.libraries.BuiltIn import BuiltIn
 from robot.libraries.Process import Process
-from robot.libraries.Screenshot import Screenshot
 from robot.running.userkeyword import UserLibrary
 from robot.version import get_version, get_full_version, get_interpreter
 from six import text_type, iteritems
-from sqlalchemy.sql.expression import false
 
 from common import AllureImpl
 from constants import Robot, ROBOT_OUTPUT_FILES, SEVERITIES, STATUSSES
@@ -52,6 +48,10 @@ class AllureListener(object):
         self.callstack = []
         self.AllurePropPath = allurePropPath
         self.AllureIssueIdRegEx=''
+        self.suite_setup = None
+        self.suite_teardown = None
+        self.test_setup = None
+        self.test_teardown = None
         self.testsuite is None
         self.isFirstSuite = True
 
@@ -59,7 +59,7 @@ class AllureListener(object):
         # I case the Listener is added via Command Line, the Robot Context is not
         # yet there and will cause an exceptions. Similar section in start_suite.
         try:
-            AllureListenerActive = BuiltIn().get_variable_value('${ALLURE}', false)
+            AllureListenerActive = BuiltIn().get_variable_value('${ALLURE}', False)
             BuiltIn().set_global_variable('${ALLURE}', True)
 
         except:
@@ -68,27 +68,14 @@ class AllureListener(object):
         
 
     def start_suitesetup(self, name, attributes):
-        
-        start_test_attributes= {'critical': 'yes',
-                                'doc': 'Test Suite Setup section',
-                                'starttime': attributes['starttime'],
-                                'tags': [],
-                                'id': 's1-s1-t0',
-                                'longname': BuiltIn().get_variable_value('${SUITE_NAME}'),
-                                'template': ''
-                                }
- 
-        if len(str(start_test_attributes.get('doc'))) > 0:
-            description = str(start_test_attributes.get('doc'))
-        else:
-            description = name
 
+        severity = 'blocker'
         test = TestCase(name=name,
-                description=description,
+                description=name,
                 start=now(),
                 attachments=[],
                 labels=[],
-#                 parameters=[],
+                severity=severity,
                 steps=[])
 
         self.stack.append(test)
@@ -96,75 +83,45 @@ class AllureListener(object):
     
     def end_suitesetup(self, name, attributes):
 
-        end_test_attributes= {'critical': 'yes',
-                                'doc': 'Test Suite Setup section',
-                                'starttime': attributes['starttime'],
-                                'endtime': attributes['endtime'],
-                                'status': 'PASS',
-                                'tags': [],
-                                'id': 's1-s1-t0',
-                                'longname': BuiltIn().get_variable_value('${SUITE_NAME}'),
-                                'template': ''
-                                }
-
-        test = self.stack.pop()
-        BuiltIn().run_keyword(name)
-        
-        if end_test_attributes.get('status') == Robot.PASS:
-            test.status = Status.PASSED
-        elif end_test_attributes.get('status')==Robot.FAIL:
-            test.status = Status.FAILED
-            test.failure = Failure(message=end_test_attributes.get('message'), trace='')
-        elif end_test_attributes.get('doc') is not '':
-            test.description = attributes.get('doc')
-
-        if end_test_attributes['tags']:
-            for tag in end_test_attributes['tags']:
-                if re.search(self.AllureIssueIdRegEx, tag):
-                    test.labels.append(TestLabel(
-                        name=Label.ISSUE,
-                        value=tag))
-                if tag.startswith('feature'):
-                    test.labels.append(TestLabel(
-                        name='feature',
-                        value=tag.split(':')[-1]))
-                if tag.startswith('story'):
-                    test.labels.append(TestLabel(
-                        name='story',
-                        value=tag.split(':')[-1]))
-                elif tag in SEVERITIES:
-                    test.labels.append(TestLabel(
-                        name='severity',
-                        value=tag))
-                elif tag in STATUSSES:
-                    test.status = tag  # overwrites the actual test status with this value.
-
-        self.PabotPoolId =  BuiltIn().get_variable_value('${PABOTEXECUTIONPOOLID}')
-        
-        if(self.PabotPoolId is not None):
-            self.threadId = 'PabotPoolId-' + str(self.PabotPoolId)
+        step = self.stack.pop()
+        if attributes.get('status') == Robot.PASS:
+            step.status = Status.PASSED
         else:
-            self.threadId = threading._get_ident()
-                
-        test.labels.append(TestLabel(
-            name='thread',
-            value=str(self.threadId)))
+            step.status = Status.FAILED
+        step.description = attributes.get('doc')
+        step.stop = now()
+        step = TestStep(name=name,
+                              title=attributes.get('kwname'),
+                              attachments=[],
+                              status=step.status,
+                              steps=step.steps,
+                              start=step.start,
+                              stop=step.stop)
+        if attributes.get('type') == 'Setup':
+            if not self.stack:
+                self.suite_setup = step
+            else:
+                self.stack[-1].steps.append(step)
 
-        self.testsuite.tests.append(test)
-        test.stop = now()        
-        return test
+        else:
+            self.suite_teardown = step
+        #self.testsuite.tests.append(test)
+
+        return step
     
     def start_test(self, name, attributes):
 
-        if len(str(attributes.get('doc'))) > 0:
-            description = str(attributes.get('doc'))
+        if len(attributes.get('doc')) > 0:
+            description = attributes.get('doc')
         else:
             description = name
 
+        severity = 'critical' if attributes['critical'] == 'yes' else 'normal'
         test = TestCase(name=name,
                 description=description,
                 start=now(),
                 attachments=[],
+                severity=severity,
                 labels=[],
                 steps=[])
 
@@ -228,7 +185,7 @@ class AllureListener(object):
         # Reading the Allure Properties file for the Issue Id regular expression
         # for the Issues and the URL to where the Issues/Test Man links should go.
         if(self.AllurePropPath is None):
-            self.AllurePropPath = self.SuitSrc + '\\allure.properties'
+            self.AllurePropPath = os.path.join(self.SuitSrc, 'allure.properties')
 
         if os.path.exists(self.AllurePropPath) is True: 
             self.AllureProperties = AllureProperties(self.AllurePropPath)
@@ -273,7 +230,7 @@ class AllureListener(object):
             description = name
         
         self.testsuite = TestSuite(name=name,
-                title=name,
+                title=attributes['longname'],
                 description=description,
                 tests=[],
                 labels=[],
@@ -284,6 +241,13 @@ class AllureListener(object):
     def end_suite(self, name, attributes):
 
         self.testsuite.stop = now()
+        for test in self.testsuite.tests:
+            if self.suite_setup:
+                test.steps.insert(0, self.suite_setup)
+            if self.suite_teardown:
+                test.steps.append(self.suite_teardown)
+        self.suite_setup = None
+        self.suite_teardown = None
         logfilename = '%s-testsuite.xml' % uuid.uuid4()
 
         # When running a folder, the folder itself is also considered a Suite
@@ -297,11 +261,11 @@ class AllureListener(object):
                 self.AllureImplc._write_xml(f, self.testsuite)
         return
 
-    def start_keyword(self, name, attributes):
+    def start_keyword(self, name, attributes, is_message=False):
 #         logger.console('\nstart_keyword: ['+name+']')
 #         logger.console('  ['+attributes['type']+'] [stack lenght] ['+str(len(self.stack))+'] [testsuite lenght] ['+ str(len(self.testsuite.tests))+']')
 
-        if(hasattr(self, attributes.get('kwname').replace(" ", "_")) and callable(getattr(self, attributes.get('kwname').replace(" ", "_")))):
+        if(not is_message and hasattr(self, attributes.get('kwname').replace(" ", "_")) and callable(getattr(self, attributes.get('kwname').replace(" ", "_")))):
            libraryMethodToCall = getattr(self, attributes.get('kwname').replace(" ", "_"))
            result = libraryMethodToCall(name, attributes)
            keyword = TestStep(name=name,
@@ -329,7 +293,7 @@ class AllureListener(object):
         Although there is no test case yet, a virtual one is created to allow 
         for the inclusion of the keyword.
         """
-        if(attributes.get('type') == 'Setup' and len(self.stack) == 0):
+        if(attributes.get('type') == 'Setup'):
             self.start_suitesetup(name, attributes)
             return
 
@@ -358,13 +322,13 @@ class AllureListener(object):
                 self.stack[-1].steps.append(step)
                 return
 
-            if(attributes.get('type') == 'Setup' and len(self.testsuite.tests) == 0):
-                self.end_suitesetup(name, attributes)
-                return
-            
-            if(attributes.get('type') == 'Teardown' and isinstance(self.stack[-1], TestCase) is True):
-                self.end_suitesetup(name, attributes)
-                return
+        if(attributes.get('type') == 'Setup'):
+            self.end_suitesetup(name, attributes)
+            return
+
+        if(attributes.get('type') == 'Teardown'):
+            self.end_suitesetup(name, attributes)
+            return
         return
 
     def message(self, msg):
@@ -384,7 +348,10 @@ class AllureListener(object):
                     self.attach('{}'.format(screenshot.group(0)) , screenshot.group(0))
             if(msg['html']=='yes'):
                 screenshot = re.search('[a-z]+-[a-z]+-[0-9]+.png',msg['message'])
-                kwname = '{}'.format(screenshot.group(0))
+                if screenshot:
+                    kwname = '{}'.format(screenshot.group(0))
+                else:
+                    kwname = msg['message']
 #                 logger.console('kwname: '+kwname)
             else:
                 kwname = msg['message']
@@ -396,7 +363,7 @@ class AllureListener(object):
                  'starttime': now(),
                  'tags': [],
                  'type': 'Keyword'}
-            self.start_keyword('Log Message', startKeywordArgs)
+            self.start_keyword('Log Message', startKeywordArgs, True)
 
             endKeywordArgs=     {'args': [],
                  'assign': [],
@@ -421,7 +388,7 @@ class AllureListener(object):
 #             self.save_properties()
             self.AllureProperties.save_properties()
             logger.console("pabot poolid: ["+ str(self.PabotPoolId)+"]")
-            if (self.AllureProperties.get_property('allure.cli.outputfiles') and self.PabotPoolId is None):
+            if (self.AllureProperties.get_property('allure.cli.outputfiles') == 'True' and self.PabotPoolId is None):
                 self.allure(self.AllureProperties)
 
         return
@@ -434,14 +401,22 @@ class AllureListener(object):
         environment['id'] = 'Robot Framework'
         environment['name'] = socket.getfqdn()
         environment['url']= 'http://'+socket.getfqdn()+':8000'
-        
+        included_args = self.AllureProperties.get_property('robot.cli.arguments.included')
+        rf_args = sys.argv[1:]
+        if included_args:
+            rf_args = []
+            for index, arg in enumerate(sys.argv):
+                if arg in included_args:
+                    rf_args.append(sys.argv[index])
+                    if index < len(sys.argv) and not sys.argv[index + 1].startswith('-'):
+                        rf_args.append(sys.argv[index + 1])
         env_dict = (\
                     {'Robot Framework Full Version': get_full_version()},\
                     {'Robot Framework Version': get_version()},\
                     {'Interpreter': get_interpreter()},\
                     {'Python version': sys.version.split()[0]},\
                     {'Allure Adapter version': VERSION},\
-                    {'Robot Framework CLI Arguments': sys.argv[1:]},\
+                    {'Robot Framework CLI Arguments': rf_args},\
                     {'Robot Framework Hostname': socket.getfqdn()},\
                     {'Robot Framework Platform': sys.platform}\
                     )
