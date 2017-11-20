@@ -129,9 +129,9 @@ class AllureListener(object):
         return
     
     def end_test(self, name, attributes):
-        logger.console('\nend_test: ['+name+']')
-#         logger.console(attributes)
-#         logger.console('   [stack lenght] ['+str(len(self.stack))+'] [testsuite lenght] ['+ str(len(self.testsuite.tests))+']')
+        # logger.console('end_test: ['+name+']')
+        logger.console(attributes)
+        # logger.console('   [stack lenght] ['+str(len(self.stack))+'] [testsuite lenght] ['+ str(len(self.testsuite.tests))+']')
 
         test = self.stack.pop()
         
@@ -142,7 +142,7 @@ class AllureListener(object):
             test.failure = Failure(message=attributes.get('message'), trace='')
         elif attributes.get('doc') is not '':
             test.description = attributes.get('doc')
-
+        
         if attributes['tags']:
             for tag in attributes['tags']:
                 if re.search(self.AllureIssueIdRegEx, tag):
@@ -215,7 +215,7 @@ class AllureListener(object):
 
         ''' Clear the directory but not if run in parallel mode in Pabot''' 
         self.PabotPoolId =  BuiltIn().get_variable_value('${PABOTEXECUTIONPOOLID}')
-        print("PabotPoolId: ", self.PabotPoolId)
+
         try:
             if(self.isFirstSuite == True 
                 and self.AllureProperties.get_property('allure.cli.logs.xml.clear') == 'True' 
@@ -431,7 +431,7 @@ class AllureListener(object):
 
         self.AllureImplc.logdir = self.AllureProperties.get_property('allure.cli.logs.xml')
         self.AllureImplc.store_environment(environment)
-        print("self.AllureImplc.environment.update(key)")
+
     
     def allure(self, AllureProps):
 
