@@ -186,8 +186,10 @@ class AllureListener(object):
         # for the Issues and the URL to where the Issues/Test Man links should go.
         if(self.AllurePropPath is None):
             self.AllurePropPath = os.path.join(self.SuitSrc, 'allure.properties')
+        else:
+            self.AllurePropPath = os.path.join(self.AllurePropPath, 'allure.properties')
 
-        if os.path.exists(self.AllurePropPath) is True: 
+        if os.path.exists(self.AllurePropPath):
             self.AllureProperties = AllureProperties(self.AllurePropPath)
             self.AllureIssueIdRegEx = self.AllureProperties.get_property('allure.issues.id.pattern')
                            
