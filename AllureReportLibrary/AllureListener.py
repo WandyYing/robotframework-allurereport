@@ -129,7 +129,7 @@ class AllureListener(object):
         return
     
     def end_test(self, name, attributes):
-#         logger.console('\nend_test: ['+name+']')
+        logger.console('\nend_test: ['+name+']')
 #         logger.console(attributes)
 #         logger.console('   [stack lenght] ['+str(len(self.stack))+'] [testsuite lenght] ['+ str(len(self.testsuite.tests))+']')
 
@@ -214,11 +214,12 @@ class AllureListener(object):
 
 
         ''' Clear the directory but not if run in parallel mode in Pabot''' 
-        PabotPoolId =  BuiltIn().get_variable_value('${PABOTEXECUTIONPOOLID}')      
+        self.PabotPoolId =  BuiltIn().get_variable_value('${PABOTEXECUTIONPOOLID}')
+        print("PabotPoolId: ", self.PabotPoolId)
         try:
             if(self.isFirstSuite == True 
                 and self.AllureProperties.get_property('allure.cli.logs.xml.clear') == 'True' 
-                and PabotPoolId is None):
+                and self.PabotPoolId is None):
                 clear_directory(self.AllureProperties.get_property('allure.cli.logs.xml'))
         except Exception as e:
             logger.console(pprint.pformat(e))
@@ -381,18 +382,20 @@ class AllureListener(object):
             self.end_keyword('Log Message', endKeywordArgs)
         return
 
-    def close(self): 
-        
+    def close(self):
         IsSuiteDirectory = os.path.isdir(self.SuitSrc)
         if(not(IsSuiteDirectory)):
     
             self.save_environment()
 #             self.save_properties()
             self.AllureProperties.save_properties()
-            logger.console("pabot poolid: ["+ str(self.PabotPoolId)+"]")
+            
+            if self.PabotPoolId is not None:
+                logger.console("pabot poolid: ["+ str(self.PabotPoolId)+"]")
             if (self.AllureProperties.get_property('allure.cli.outputfiles') == 'True' and self.PabotPoolId is None):
                 self.allure(self.AllureProperties)
-
+                ## cli has some config need to do
+            
         return
 
 
@@ -425,10 +428,10 @@ class AllureListener(object):
 
         for key in env_dict:
             self.AllureImplc.environment.update(key)
-        
+
         self.AllureImplc.logdir = self.AllureProperties.get_property('allure.cli.logs.xml')
         self.AllureImplc.store_environment(environment)
-    
+        print("self.AllureImplc.environment.update(key)")
     
     def allure(self, AllureProps):
 
